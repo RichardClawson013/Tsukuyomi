@@ -1,9 +1,10 @@
 """
-Tsukuyomi — illusion layer for AI agents.
+Tsukuyomi — genjutsu layer for AI agents.
 
-The agent never knows it's not in the real world.
+Every action goes through Tsukuyomi. The agent sees a realistic response.
+Nothing actually happens until it checks out.
 
-  from tsukuyomi import ActionProposal, FakeEmailAdapter, get_adapter, IllusionResult
+    from tsukuyomi import Tsukuyomi, ActionProposal
 """
 
 from tsukuyomi.adapters import (
@@ -14,9 +15,12 @@ from tsukuyomi.adapters import (
     get_adapter,
 )
 from tsukuyomi.email_draft import EmailDraftAdapter
+from tsukuyomi.interceptor import InterceptResult, Tsukuyomi
 from tsukuyomi.proposal import ActionProposal
 
 __all__ = [
+    "Tsukuyomi",
+    "InterceptResult",
     "ActionProposal",
     "IllusionResult",
     "FakeEmailAdapter",

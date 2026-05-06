@@ -1,12 +1,6 @@
 """
 examples/demo_run.py — Scripted demo for Tsukuyomi.
 
-Shows the full illusion in action:
-  - The agent proposes an action
-  - Tsukuyomi intercepts it
-  - The agent receives a realistic response (believes it succeeded)
-  - You see the internal audit record (the truth)
-
 Run it:
     pip install -e .
     python examples/demo_run.py
@@ -21,7 +15,6 @@ from tsukuyomi import ActionProposal, FakeEmailAdapter, FakeFileAdapter, FakeCal
 CYAN   = "\033[36m"
 GREEN  = "\033[32m"
 YELLOW = "\033[33m"
-RED    = "\033[31m"
 BOLD   = "\033[1m"
 DIM    = "\033[2m"
 RESET  = "\033[0m"
@@ -29,60 +22,46 @@ RESET  = "\033[0m"
 SEP = BOLD + "─" * 60 + RESET
 
 
-def pause(n: float = 0.15) -> None:
+def line(text: str, color: str = "", indent: int = 0) -> None:
+    prefix = "  " * indent
+    print(color + prefix + text + RESET, flush=True)
+    time.sleep(0.6)
+
+
+def gap(n: float = 1.5) -> None:
     time.sleep(n)
 
 
-def show(text: str, color: str = "", indent: int = 0) -> None:
-    prefix = "  " * indent
-    print(color + prefix + text + RESET, flush=True)
-    pause()
-
-
 def section(title: str) -> None:
+    gap(2.0)
     print()
     print(SEP)
-    show(title, BOLD)
+    line(title, BOLD)
     print(SEP)
-    pause(0.1)
+    gap(1.0)
 
 
-def agent_says(text: str) -> None:
-    show(f"agent  →  {text}", CYAN)
-    pause(0.05)
-
-
-def you_see(label: str, data: dict) -> None:
+def show_dict(data: dict, color: str = DIM, indent: int = 1) -> None:
     import json
-    show(f"you    ←  {label}:", GREEN)
-    for line in json.dumps(data, indent=2).splitlines():
-        show(line, DIM, indent=2)
-    pause(0.05)
-
-
-def agent_receives(data: dict) -> None:
-    import json
-    show("agent  ←  (Tsukuyomi hands back)", YELLOW)
-    for line in json.dumps(data, indent=2).splitlines():
-        show(line, CYAN, indent=2)
-    pause(0.05)
+    for ln in json.dumps(data, indent=2).splitlines():
+        line(ln, color, indent)
 
 
 def main() -> None:
+    gap(0.5)
     print()
     print(BOLD + "=" * 60 + RESET)
     print(BOLD + "Tsukuyomi — Illusion Layer Demo" + RESET)
     print(BOLD + "=" * 60 + RESET)
-    show("The agent acts. You decide when it's real.", DIM)
-    pause(0.2)
+    line("The agent acts. You decide when it's real.", DIM)
+    gap(2.0)
 
     # ── Scenario 1: Email ─────────────────────────────────────────────────
     section("Scenario 1 — Agent sends an email")
 
-    show("The agent wants to send a confirmation email to the client.", DIM)
-    show("Tsukuyomi intercepts it.", DIM)
-    print()
-    pause(0.1)
+    line("The agent wants to send a confirmation email.", DIM)
+    line("Tsukuyomi intercepts it before anything is sent.", DIM)
+    gap(1.5)
 
     proposal = ActionProposal(
         agent_name="sales-agent",
@@ -90,30 +69,30 @@ def main() -> None:
         tool_args={
             "to": "client@acmecorp.com",
             "subject": "Your order is confirmed — #4821",
-            "body": "Hi Sarah, your order has been confirmed and is now in production.",
         },
     )
 
-    agent_says('"send email to client@acmecorp.com — order confirmed"')
-    pause(0.1)
+    line('agent  →  "send email to client@acmecorp.com"', CYAN)
+    gap(1.5)
 
     result = FakeEmailAdapter().execute(proposal)
 
-    agent_receives(result.llm_response)
-    print()
-    show("The agent believes the email was sent. It moves on.", DIM)
-    print()
-    pause(0.1)
+    line("What the agent receives:", YELLOW)
+    show_dict(result.llm_response, CYAN)
+    gap(2.5)
 
-    you_see("audit record (internal — never reaches the agent)", result.audit_record)
-    show("Nothing was sent. The action is staged. You approve it when ready.", DIM)
+    line("What you see internally:", GREEN)
+    show_dict(result.audit_record, DIM)
+    gap(1.5)
+
+    line("Nothing was sent. The action is staged.", DIM)
+    line("You approve it when ready.", DIM)
 
     # ── Scenario 2: File write ────────────────────────────────────────────
     section("Scenario 2 — Agent writes a file")
 
-    show("The agent wants to update a report file.", DIM)
-    print()
-    pause(0.1)
+    line("The agent wants to update a report file.", DIM)
+    gap(1.5)
 
     proposal2 = ActionProposal(
         agent_name="reporting-agent",
@@ -124,89 +103,70 @@ def main() -> None:
         },
     )
 
-    agent_says('"write file /reports/q2_summary.csv"')
-    pause(0.1)
+    line('agent  →  "write /reports/q2_summary.csv"', CYAN)
+    gap(1.5)
 
     result2 = FakeFileAdapter().execute(proposal2)
 
-    agent_receives(result2.llm_response)
-    print()
-    you_see("audit record", result2.audit_record)
-    show("File was not written. Staged.", DIM)
+    line("What the agent receives:", YELLOW)
+    show_dict(result2.llm_response, CYAN)
+    gap(2.5)
 
-    # ── Scenario 3: Calendar ──────────────────────────────────────────────
-    section("Scenario 3 — Agent books a meeting")
+    line("What you see internally:", GREEN)
+    show_dict(result2.audit_record, DIM)
+    gap(1.5)
 
-    show("The agent wants to schedule a follow-up call.", DIM)
-    print()
-    pause(0.1)
+    line("File was not written. Staged.", DIM)
 
-    proposal3 = ActionProposal(
-        agent_name="calendar-agent",
-        tool_name="create_calendar_event",
-        tool_args={
-            "title": "Follow-up call — Acme Corp",
-            "date": "2024-07-15",
-            "time": "14:00",
-            "attendees": ["rob@droogdoc.nl", "sarah@acmecorp.com"],
-        },
-    )
+    # ── Scenario 3: Real .eml draft ───────────────────────────────────────
+    section("Scenario 3 — Real email draft saved to disk")
 
-    agent_says('"create calendar event — follow-up call 2024-07-15 14:00"')
-    pause(0.1)
-
-    result3 = FakeCalendarAdapter().execute(proposal3)
-
-    agent_receives(result3.llm_response)
-    print()
-    you_see("audit record", result3.audit_record)
-    show("No event created. Staged.", DIM)
-
-    # ── Scenario 4: Real .eml draft ───────────────────────────────────────
-    section("Scenario 4 — Real email draft saved to disk")
-
-    show("EmailDraftAdapter writes an actual .eml file.", DIM)
-    show("Agent still sees 'queued'. You get a real file you can send.", DIM)
-    print()
-    pause(0.1)
+    line("EmailDraftAdapter writes an actual .eml file to disk.", DIM)
+    line("The agent still sees 'queued'. You get a real file.", DIM)
+    gap(1.5)
 
     draft_dir = pathlib.Path(tempfile.mkdtemp())
     adapter = EmailDraftAdapter(drafts_dir=draft_dir)
 
-    proposal4 = ActionProposal(
+    proposal3 = ActionProposal(
         agent_name="invoice-agent",
         tool_name="email_draft",
         tool_args={
             "to": "client@acmecorp.com",
             "subject": "Invoice #1042 — Acme Corp",
-            "body": "Hi Sarah,\n\nPlease find invoice #1042 attached.\n\nBest,\nRob",
+            "body": "Hi Sarah, please find invoice #1042 attached.",
         },
     )
 
-    agent_says('"queue email draft — Invoice #1042"')
-    pause(0.1)
+    line('agent  →  "queue email draft — Invoice #1042"', CYAN)
+    gap(1.5)
 
-    result4 = adapter.execute(proposal4)
+    result3 = adapter.execute(proposal3)
 
-    agent_receives(result4.llm_response)
-    print()
-    you_see("audit record", result4.audit_record)
-    show(f"Real .eml file on disk: {result4.audit_record['draft_path']}", GREEN)
-    show("Send it whenever you're ready. Or don't.", DIM)
+    line("What the agent receives:", YELLOW)
+    show_dict(result3.llm_response, CYAN)
+    gap(2.5)
+
+    line("What you see internally:", GREEN)
+    show_dict(result3.audit_record, DIM)
+    gap(1.5)
+
+    line(f"Real .eml on disk — send it when you're ready.", GREEN)
 
     # ── Summary ───────────────────────────────────────────────────────────
+    gap(2.0)
     print()
     print(BOLD + "=" * 60 + RESET)
     print(BOLD + "The rule" + RESET)
     print(BOLD + "=" * 60 + RESET)
     print()
-    show("llm_response  →  agent sees this. Realistic. No simulation markers.", CYAN)
-    show("audit_record  →  you see this. True status. Never reaches the agent.", GREEN)
-    print()
-    show("Keep them separate. That's the whole point.", BOLD)
+    line("llm_response  →  agent sees this. Realistic.", CYAN)
+    line("audit_record  →  you see this. Never reaches the agent.", GREEN)
+    gap(1.5)
+    line("Keep them separate. That's the whole point.", BOLD)
     print()
     print(BOLD + "=" * 60 + RESET)
-    print()
+    gap(1.0)
 
 
 if __name__ == "__main__":
